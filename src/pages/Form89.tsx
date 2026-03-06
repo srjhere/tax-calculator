@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { calculateTax } from "../engine/taxEngine";
-import type { FinancialYear, Regime, TaxpayerCategory } from "../engine/taxRules";
+import type { FinancialYear, Regime } from "../engine/taxRules";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -13,7 +13,6 @@ interface Employee {
   place: string;
   date: string;
   residentialStatus: string;
-  category: TaxpayerCategory;
 }
 
 interface YearRow {
@@ -106,7 +105,6 @@ export default function Form89() {
     place: "",
     date: today(),
     residentialStatus: "RESIDENT",
-    category: "others",
   });
 
   const [rows, setRows] = useState<YearRow[]>(
@@ -131,36 +129,38 @@ export default function Form89() {
       const col2 = row.taxableIncome;
       const col3 = row.grossArrear + row.domMedArrear;
       const col4 = col2 + col3;
-      const col5 = calculateTax({ financialYear: row.fy, regime: row.regime, category: emp.category, taxableIncome: col2 }).totalTax;
-      const col6 = calculateTax({ financialYear: row.fy, regime: row.regime, category: emp.category, taxableIncome: col4 }).totalTax;
+      const col5 = calculateTax({ financialYear: row.fy, regime: row.regime, category: "others", taxableIncome: col2 }).totalTax;
+      const col6 = calculateTax({ financialYear: row.fy, regime: row.regime, category: "others", taxableIncome: col4 }).totalTax;
       const col7 = Math.max(0, col6 - col5);
       return { ...row, col2, col3, col4, col5, col6, col7 };
     });
 
-    const t2 = tableA.reduce((s, r) => s + r.col2, 0);
-    const t3 = tableA.reduce((s, r) => s + r.col3, 0);
-    const t4 = tableA.reduce((s, r) => s + r.col4, 0);
-    const t5 = tableA.reduce((s, r) => s + r.col5, 0);
-    const t6 = tableA.reduce((s, r) => s + r.col6, 0);
-    const t7 = tableA.reduce((s, r) => s + r.col7, 0);
+    const t2  = tableA.reduce((s, r) => s + r.col2, 0);
+    const t3  = tableA.reduce((s, r) => s + r.col3, 0);
+    const t4  = tableA.reduce((s, r) => s + r.col4, 0);
+    const t5  = tableA.reduce((s, r) => s + r.col5, 0);
+    const t6  = tableA.reduce((s, r) => s + r.col6, 0);
+    const t7  = tableA.reduce((s, r) => s + r.col7, 0);
+    const tGA = rows.reduce((s, r) => s + r.grossArrear, 0);
+    const tDM = rows.reduce((s, r) => s + r.domMedArrear, 0);
 
     // Annexure I
     const item2 = t3; // total arrear
     const item1 = currentIncome - item2;
     const item3 = currentIncome;
-    const item4 = calculateTax({ financialYear: CURRENT_FY, regime: currentRegime, category: emp.category, taxableIncome: Math.max(0, item3) }).totalTax;
-    const item5 = calculateTax({ financialYear: CURRENT_FY, regime: currentRegime, category: emp.category, taxableIncome: Math.max(0, item1) }).totalTax;
+    const item4 = calculateTax({ financialYear: CURRENT_FY, regime: currentRegime, category: "others", taxableIncome: Math.max(0, item3) }).totalTax;
+    const item5 = calculateTax({ financialYear: CURRENT_FY, regime: currentRegime, category: "others", taxableIncome: Math.max(0, item1) }).totalTax;
     const item6 = Math.max(0, item4 - item5);
     const item7 = t7;
     const item8 = Math.max(0, item6 - item7);
 
     return {
       tableA,
-      totals: { col2: t2, col3: t3, col4: t4, col5: t5, col6: t6, col7: t7 },
+      totals: { col2: t2, col3: t3, col4: t4, col5: t5, col6: t6, col7: t7, grossArrear: tGA, domMedArrear: tDM },
       ann: { item1, item2, item3, item4, item5, item6, item7, item8 },
       currentExclArrear: item1,
     };
-  }, [rows, currentIncome, currentRegime, emp.category]);
+  }, [rows, currentIncome, currentRegime]);
 
   // ── Handlers ──────────────────────────────────────────────
 
@@ -236,14 +236,6 @@ export default function Form89() {
                     <option value="NON-RESIDENT">Non-Resident</option>
                   </select>
                 </div>
-                <div className="field">
-                  <label className="field-label">Taxpayer Category</label>
-                  <select className="field-input field-select" value={emp.category} onChange={(e) => setEmpField("category", e.target.value as TaxpayerCategory)}>
-                    <option value="others">Individual (Below 60 yrs)</option>
-                    <option value="senior">Senior Citizen (60–79 yrs)</option>
-                    <option value="super_senior">Super Senior (80+ yrs)</option>
-                  </select>
-                </div>
                 <Field label="Place" value={emp.place} onChange={(v) => setEmpField("place", v)} />
                 <Field label="Date" value={emp.date} onChange={(v) => setEmpField("date", v)} />
               </div>
@@ -313,8 +305,8 @@ export default function Form89() {
                     <tr className="arrear-table__total">
                       <td>TOTAL</td>
                       <td>{INR(calc.totals.col2)}</td>
-                      <td></td>
-                      <td></td>
+                      <td>{INR(calc.totals.grossArrear)}</td>
+                      <td>{INR(calc.totals.domMedArrear)}</td>
                       <td>{INR(calc.totals.col3)}</td>
                       <td></td>
                     </tr>
@@ -640,8 +632,8 @@ export default function Form89() {
               <tr className="pv-total">
                 <td>TOTAL</td>
                 <td>{INR_PLAIN(calc.totals.col2)}</td>
-                <td></td>
-                <td></td>
+                <td>{INR_PLAIN(calc.totals.grossArrear)}</td>
+                <td>{INR_PLAIN(calc.totals.domMedArrear)}</td>
               </tr>
             </tbody>
           </table>
