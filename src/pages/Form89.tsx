@@ -189,8 +189,8 @@ export default function Form89() {
         <header className="form-header">
           <div className="form-header__icon">🧾</div>
           <div>
-            <h1 className="form-header__title">Section 89(1) Relief Calculator</h1>
-            <p className="form-header__sub">Form 10E · Arrear Salary Relief · FY 2025–26</p>
+            <h1 className="form-header__title">New India Assurance Tax Relief Calculator 2026</h1>
+            <p className="form-header__sub">Section 89(1) · Form 10E · Arrear Salary Relief · FY 2025–26</p>
           </div>
           {view === "results" && (
             <button className="print-btn" onClick={handlePrint}>
